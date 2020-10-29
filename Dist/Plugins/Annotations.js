@@ -1,8 +1,8 @@
 import { Assert, E } from "../Utils/FromJSVE";
 export class AnnotationsOptions {
 }
-export function ConvertPositionIndicatorToContextPoint(pos, chart, context, defaultScaleKey) {
-    var _a;
+export function ConvertPosIndicatorToContextPoint(pos, chart, context, defaultScaleKey, defaultFinalize) {
+    var _a, _b;
     if (typeof pos == "number") {
         pos = { type: "valueOnAxis", axisKey: defaultScaleKey, value: pos };
     }
@@ -15,13 +15,27 @@ export function ConvertPositionIndicatorToContextPoint(pos, chart, context, defa
             pos = { type: "pixelOnCanvas", value: pos == "min" ? top : top + height };
         }
     }
+    let result;
     if (pos.type == "valueOnAxis") {
-        return chart.valToPos(pos.value, "x", (_a = pos.canvasPixels) !== null && _a !== void 0 ? _a : true);
+        result = chart.valToPos(pos.value, (_a = pos.axisKey) !== null && _a !== void 0 ? _a : defaultScaleKey, (_b = pos.canvasPixels) !== null && _b !== void 0 ? _b : true);
     }
     if (pos.type == "pixelOnCanvas") {
-        return pos.value;
+        result = pos.value;
     }
-    Assert(false, `Invalid position-indicator type (${pos["type"]}).`);
+    Assert(result != null, `Position/size element cannot be null.`);
+    const finalize = pos.finalize !== undefined ? pos.finalize : defaultFinalize;
+    if (pos.finalize != null) {
+        if (pos.finalize == "floor")
+            result = Math.floor(result);
+        else if (pos.finalize == "ceiling")
+            result = Math.ceil(result);
+        else if (pos.finalize == "round")
+            result = Math.round(result);
+        else
+            result = pos.finalize(result);
+    }
+    Assert(result != null, `Position/size element cannot be null. (after finalization)`);
+    return result;
 }
 export function AnnotationsPlugin(opts) {
     opts = E(new AnnotationsOptions(), opts);
@@ -33,7 +47,10 @@ export function AnnotationsPlugin(opts) {
                 ctx.save();
                 for (let entry of opts.annotations) {
                     if (entry.type == "line") {
-                        const newEntry = E(entry, { type: "box", x: null, y: null }, entry.x != null && {
+                        const newEntry = E({
+                            type: "box",
+                            fillStyle: entry.color,
+                        }, entry.x != null && {
                             xMin: entry.x,
                             xSize: { type: "pixelOnCanvas", value: entry.lineWidth },
                             yMin: "min",
@@ -46,16 +63,14 @@ export function AnnotationsPlugin(opts) {
                         });
                         entry = newEntry;
                     }
-                    ctx.strokeStyle = entry.strokeStyle;
-                    ctx.fillStyle = entry.fillStyle;
-                    ctx.lineWidth = entry.lineWidth;
+                    ctx.beginPath();
+                    ctx.rect(left, top, width, height);
+                    ctx.clip(); // make sure we don't draw outside of chart-bounds
                     if (entry.type == "box") {
-                        ctx.beginPath();
-                        ctx.rect(left, top, width, height);
-                        ctx.clip(); // make sure we don't draw outside of chart-bounds
+                        ctx.fillStyle = entry.fillStyle;
                         function FillMinMaxAndSizeFrom2(vals) {
                             return vals.map((val, i) => {
-                                if (val)
+                                if (val != null)
                                     return val;
                                 if (i == 0)
                                     return vals[1] - vals[2];
@@ -66,19 +81,25 @@ export function AnnotationsPlugin(opts) {
                                 return vals[1] - vals[0];
                             });
                         }
+                        //const indexToType = ["min", "max", "size"];
+                        const indexToDefaultFinalize = ["floor", "ceiling", "ceiling"];
                         const xVals = [entry.xMin, entry.xMax, entry.xSize];
                         Assert(xVals.filter(a => a != null).length == 2, "Exactly two of these should be specified: xMin, xMax, xSize");
-                        const xVals_ctx = xVals.map(val => (val ? ConvertPositionIndicatorToContextPoint(val, u, ctx, "x") : null));
+                        const xVals_ctx = xVals.map((val, i) => (val != null ? ConvertPosIndicatorToContextPoint(val, u, ctx, "x", indexToDefaultFinalize[i]) : null));
                         const xVals_ctx_final = FillMinMaxAndSizeFrom2(xVals_ctx);
                         const yVals = [entry.yMin, entry.yMax, entry.ySize];
                         Assert(yVals.filter(a => a != null).length == 2, "Exactly two of these should be specified: yMin, yMax, ySize");
-                        const yVals_ctx = yVals.map(val => (val ? ConvertPositionIndicatorToContextPoint(val, u, ctx, "y") : null));
+                        const yVals_ctx = yVals.map((val, i) => (val != null ? ConvertPosIndicatorToContextPoint(val, u, ctx, "y", indexToDefaultFinalize[i]) : null));
                         const yVals_ctx_final = FillMinMaxAndSizeFrom2(yVals_ctx);
                         ctx.fillRect(xVals_ctx_final[0], yVals_ctx_final[0], xVals_ctx_final[2], yVals_ctx_final[2]);
+                        if (entry.lineWidth > 0) {
+                            ctx.strokeStyle = entry.strokeStyle;
+                            ctx.lineWidth = entry.lineWidth;
+                            ctx.rect(xVals_ctx_final[0], yVals_ctx_final[0], xVals_ctx_final[2], yVals_ctx_final[2]);
+                        }
                     } /*else if (entry.type == "line") {
-                        ctx.beginPath();
-                        ctx.rect(left, top, width, height);
-                        ctx.clip(); // make sure we don't draw outside of chart-bounds
+                        ctx.strokeStyle = entry.strokeStyle;
+                        ctx.lineWidth = entry.lineWidth;
 
                         ctx.beginPath();
                         ctx.moveTo(cx, top);

@@ -1,21 +1,26 @@
 import uPlot from "uplot";
-export declare type PositionIndicatorObj = {
+/** Mark some properties which only the former including as optional and set the value to never */
+declare type Without<T, U> = {
+    [P in Exclude<keyof T, keyof U>]?: never;
+};
+/** get the XOR type which could make 2 types exclude each other */
+export declare type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
+export declare type FinalizeOp = "floor" | "ceiling" | "round" | ((val: number) => number) | null;
+export declare type PositionIndicatorObj = XOR<{
     type: "valueOnAxis";
-    axisKey: string;
+    axisKey?: string;
     value: number;
+    finalize?: FinalizeOp;
     /** See uplot.valToPos for info. */
     canvasPixels?: boolean;
-} | {
+}, {
     type: "pixelOnCanvas";
     value: number;
-};
+    finalize?: FinalizeOp;
+}>;
 export declare type PositionIndicator = number | "min" | "max" | PositionIndicatorObj;
 export declare type SizeIndicator = PositionIndicator;
-export declare type Annotation = {
-    fillStyle: typeof CanvasRenderingContext2D.prototype.fillStyle;
-    strokeStyle: typeof CanvasRenderingContext2D.prototype.strokeStyle;
-    lineWidth: number;
-} & ({
+export declare type Annotation = {} & (XOR<{
     type: "box";
     xMin?: PositionIndicator;
     xMax?: PositionIndicator;
@@ -23,17 +28,22 @@ export declare type Annotation = {
     yMin?: PositionIndicator;
     yMax?: PositionIndicator;
     ySize?: SizeIndicator;
-} | {
+    fillStyle: typeof CanvasRenderingContext2D.prototype.fillStyle;
+    strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
+    lineWidth?: number;
+}, {
     type: "line";
     x?: PositionIndicator;
     y?: PositionIndicator;
-});
+    color: typeof CanvasRenderingContext2D.prototype.fillStyle;
+    lineWidth: number;
+}>);
 declare type Options_OptionalForInitOnly = any;
 export declare type AnnotationsOptions_ForInit = Omit<AnnotationsOptions, Options_OptionalForInitOnly> & Partial<Pick<AnnotationsOptions, Options_OptionalForInitOnly>>;
 export declare class AnnotationsOptions {
     annotations: Annotation[];
 }
-export declare function ConvertPositionIndicatorToContextPoint(pos: PositionIndicator, chart: uPlot, context: CanvasRenderingContext2D, defaultScaleKey: "x" | "y"): number | undefined;
+export declare function ConvertPosIndicatorToContextPoint(pos: PositionIndicator, chart: uPlot, context: CanvasRenderingContext2D, defaultScaleKey: "x" | "y", defaultFinalize: FinalizeOp): number;
 export declare function AnnotationsPlugin(opts: AnnotationsOptions): {
     hooks: uPlot.PluginHooks;
 };

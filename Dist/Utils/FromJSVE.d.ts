@@ -2,7 +2,7 @@ export declare function E<E1, E2, E3, E4, E5, E6, E7, E8, E9, E10, E11, E12, E13
 export declare function ToJSON(obj: any): string;
 export declare function FromJSON(json: any): any;
 export declare function RemoveDuplicates(items: any): any[];
-export declare function Assert(condition: any, messageOrMessageFunc?: string | Function): void;
+export declare function Assert(condition: any, messageOrMessageFunc?: string | Function): asserts condition;
 export declare function AssertWarn(condition: any, messageOrMessageFunc?: string | Function): void;
 export declare function Clone(obj: any, keepPrototype?: boolean): any;
 export declare function IsNaN(obj: any): boolean;

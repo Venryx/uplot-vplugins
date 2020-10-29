@@ -25,7 +25,7 @@ export function RemoveDuplicates(items: any) {
 	return result;
 }
 
-export function Assert(condition, messageOrMessageFunc?: string | Function) {
+export function Assert(condition, messageOrMessageFunc?: string | Function): asserts condition {
 	if (condition) return;
 
 	var message = (messageOrMessageFunc as any) instanceof Function ? (messageOrMessageFunc as any)() : messageOrMessageFunc;
