@@ -42,10 +42,12 @@ export function AnnotationsPlugin(opts) {
     return {
         hooks: {
             drawSeries(u, i) {
+                var _a;
                 const { ctx } = u;
                 const { left, top, width, height } = u.bbox;
                 ctx.save();
                 for (let entry of opts.annotations) {
+                    ctx.globalCompositeOperation = (_a = entry.drawType) !== null && _a !== void 0 ? _a : "source-over";
                     if (entry.type == "line") {
                         const newEntry = E({
                             type: "box",

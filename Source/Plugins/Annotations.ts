@@ -22,8 +22,38 @@ export type PositionIndicatorObj = XOR<{
 export type PositionIndicator = number | "min" | "max" | PositionIndicatorObj;
 export type SizeIndicator = PositionIndicator; // they're compatible
 
+/** See details here: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation */
+export type DrawType =
+	"source-over" |
+	"source-in" |
+	"source-out" |
+	"source-atop" |
+	"destination-over" |
+	"destination-in" |
+	"destination-out" |
+	"destination-atop" |
+	"lighter" |
+	"copy" |
+	"xor" |
+	"multiply" |
+	"screen" |
+	"overlay" |
+	"darken" |
+	"lighten" |
+	"color-dodge" |
+	"color-burn" |
+	"hard-light" |
+	"soft-light" |
+	"difference" |
+	"exclusion" |
+	"hue" |
+	"saturation" |
+	"color" |
+	"luminosity";
+
 //export type AnnotationType = "box"
 export type Annotation = {
+	drawType?: DrawType;
 } & (
 	XOR<{
 		type: "box";
@@ -96,6 +126,7 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 				ctx.save();
 
 				for (let entry of opts.annotations) {
+					ctx.globalCompositeOperation = entry.drawType ?? "source-over";
 					if (entry.type == "line") {
 						const newEntry: Annotation = E(
 							{

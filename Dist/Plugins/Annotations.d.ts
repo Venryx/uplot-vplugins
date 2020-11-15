@@ -20,7 +20,11 @@ export declare type PositionIndicatorObj = XOR<{
 }>;
 export declare type PositionIndicator = number | "min" | "max" | PositionIndicatorObj;
 export declare type SizeIndicator = PositionIndicator;
-export declare type Annotation = {} & (XOR<{
+/** See details here: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation */
+export declare type DrawType = "source-over" | "source-in" | "source-out" | "source-atop" | "destination-over" | "destination-in" | "destination-out" | "destination-atop" | "lighter" | "copy" | "xor" | "multiply" | "screen" | "overlay" | "darken" | "lighten" | "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" | "exclusion" | "hue" | "saturation" | "color" | "luminosity";
+export declare type Annotation = {
+    drawType?: DrawType;
+} & (XOR<{
     type: "box";
     xMin?: PositionIndicator;
     xMax?: PositionIndicator;
