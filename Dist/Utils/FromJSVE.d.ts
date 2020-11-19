@@ -9,3 +9,5 @@ export declare function IsNaN(obj: any): boolean;
 export declare function IsNumber(obj: any, allowNumberObj?: boolean, allowNaN?: boolean): obj is number;
 export declare function ToNumber(stringOrFloatVal: string | number | undefined | null, valIfConversionFails?: number, allowParseNaN?: boolean): number;
 export declare function NumberCES_KeepBetween(s: Number, min: number, max: number, allowFixMinMax?: boolean): number;
+export declare function Lerp(from: number, to: number, percentFromXToY: number): number;
+export declare function GetPercentFromXToY(start: number, end: number, val: number): number;

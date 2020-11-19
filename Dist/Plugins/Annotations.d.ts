@@ -6,19 +6,16 @@ declare type Without<T, U> = {
 /** get the XOR type which could make 2 types exclude each other */
 export declare type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
 export declare type FinalizeOp = "floor" | "ceiling" | "round" | ((val: number) => number) | null;
-export declare type PositionIndicatorObj = XOR<{
-    type: "valueOnAxis";
-    axisKey?: string;
+export declare type PositionIndicator = XOR<{
     value: number;
-    finalize?: FinalizeOp;
+    value_axis?: string;
     /** See uplot.valToPos for info. */
-    canvasPixels?: boolean;
+    value_toCanvasPixels?: boolean;
+    finalize?: FinalizeOp;
 }, {
-    type: "pixelOnCanvas";
-    value: number;
+    pixel: number | string;
     finalize?: FinalizeOp;
 }>;
-export declare type PositionIndicator = number | "min" | "max" | PositionIndicatorObj;
 export declare type SizeIndicator = PositionIndicator;
 /** See details here: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation */
 export declare type DrawType = "source-over" | "source-in" | "source-out" | "source-atop" | "destination-over" | "destination-in" | "destination-out" | "destination-atop" | "lighter" | "copy" | "xor" | "multiply" | "screen" | "overlay" | "darken" | "lighten" | "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" | "exclusion" | "hue" | "saturation" | "color" | "luminosity";

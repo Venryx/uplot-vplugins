@@ -1,26 +1,41 @@
-import { Assert, E } from "../Utils/FromJSVE";
+import { Assert, E, Lerp } from "../Utils/FromJSVE";
 export class AnnotationsOptions {
 }
 export function ConvertPosIndicatorToContextPoint(pos, chart, context, defaultScaleKey, defaultFinalize) {
-    var _a, _b;
-    if (typeof pos == "number") {
-        pos = { type: "valueOnAxis", axisKey: defaultScaleKey, value: pos };
-    }
-    else if (typeof pos == "string") {
-        const { left, top, width, height } = chart.bbox;
+    /*if (typeof pos == "number") {
+        pos = {type: "valueOnAxis", axisKey: defaultScaleKey, value: pos};
+    } else if (typeof pos == "string") {
+        const {left, top, width, height} = chart.bbox;
+        const percent = Number(pos.slice(0, -1)) / 100;
         if (defaultScaleKey == "x") {
-            pos = { type: "pixelOnCanvas", value: pos == "min" ? left : left + width };
+            pos = {type: "pixelOnCanvas", value: Lerp(left, left + width, percent)};
+        } else {
+            pos = {type: "pixelOnCanvas", value: Lerp(top + height, top, percent)};
+        }
+    }*/
+    var _a, _b;
+    let result;
+    if (pos.value != null) {
+        result = chart.valToPos(pos.value, (_a = pos.value_axis) !== null && _a !== void 0 ? _a : defaultScaleKey, (_b = pos.value_toCanvasPixels) !== null && _b !== void 0 ? _b : true);
+    }
+    else if (pos.pixel != null) {
+        if (typeof pos.pixel == "number") {
+            result = pos.pixel;
         }
         else {
-            pos = { type: "pixelOnCanvas", value: pos == "min" ? top : top + height };
+            const { left, top, width, height } = chart.bbox;
+            const percent = Number(pos.pixel.slice(0, -1)) / 100;
+            if (defaultScaleKey == "x") {
+                result = Lerp(left, left + width, percent);
+            }
+            else {
+                //result = Lerp(top + height, top, percent);
+                result = Lerp(top, top + height, percent);
+            }
         }
     }
-    let result;
-    if (pos.type == "valueOnAxis") {
-        result = chart.valToPos(pos.value, (_a = pos.axisKey) !== null && _a !== void 0 ? _a : defaultScaleKey, (_b = pos.canvasPixels) !== null && _b !== void 0 ? _b : true);
-    }
-    if (pos.type == "pixelOnCanvas") {
-        result = pos.value;
+    else {
+        Assert(false, `Either "value" or "pixel" field must be supplied for pos/size indicator.`);
     }
     Assert(result != null, `Position/size element cannot be null.`);
     const finalize = pos.finalize !== undefined ? pos.finalize : defaultFinalize;
@@ -49,25 +64,24 @@ export function AnnotationsPlugin(opts) {
                 for (let entry of opts.annotations) {
                     ctx.globalCompositeOperation = (_a = entry.drawType) !== null && _a !== void 0 ? _a : "source-over";
                     if (entry.type == "line") {
+                        // add "floor" op to position-indicator (if finalize-op unspecified), to ensure that line stays actually one pixel thick
+                        if (entry.x && entry.x.finalize === undefined)
+                            entry.x.finalize = a => Math.floor(a);
+                        if (entry.y && entry.y.finalize === undefined)
+                            entry.y.finalize = a => Math.floor(a);
                         const newEntry = E({
                             type: "box",
                             fillStyle: entry.color,
                         }, entry.x != null && {
-                            //xMin: entry.x,
-                            xMin: typeof entry.x == "number"
-                                ? { type: "valueOnAxis", axisKey: "x", value: entry.x, finalize: a => Math.floor(a) } // floor, to ensure that line stays actually one pixel thick
-                                : entry.x,
-                            xSize: { type: "pixelOnCanvas", value: entry.lineWidth },
-                            yMin: "min",
-                            yMax: "max",
+                            xMin: entry.x,
+                            xSize: { pixel: entry.lineWidth },
+                            yMin: { pixel: "0%" },
+                            yMax: { pixel: "100%" },
                         }, entry.y != null && {
-                            xMin: "min",
-                            xMax: "max",
-                            //yMin: entry.y,
-                            yMin: typeof entry.y == "number"
-                                ? { type: "valueOnAxis", axisKey: "y", value: entry.y, finalize: a => Math.floor(a) } // floor, to ensure that line stays actually one pixel thick
-                                : entry.y,
-                            ySize: { type: "pixelOnCanvas", value: entry.lineWidth },
+                            xMin: { pixel: "0%" },
+                            xMax: { pixel: "100%" },
+                            yMin: entry.y,
+                            ySize: { pixel: entry.lineWidth },
                         });
                         entry = newEntry;
                     }

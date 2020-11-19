@@ -74,4 +74,16 @@ export function NumberCES_KeepBetween(s, min, max, allowFixMinMax = true) {
 /*export function Math_Truncate(value: number) {
     if (value >= 0) return Math.floor(value);
     return Math.ceil(value);
-}*/ 
+}*/
+// just use the word 'percent', even though value is represented as fraction (e.g. 0.5, rather than 50[%])
+export function Lerp(from, to, percentFromXToY) {
+    const result = from + ((to - from) * percentFromXToY);
+    //if (keepResultInRange) result = NumberCE(result).KeepBetween(from, to) as number;
+    return result;
+}
+export function GetPercentFromXToY(start, end, val) {
+    // distance-from-x / distance-from-x-required-for-result-'1'
+    var result = (val - start) / (end - start);
+    //if (keepResultInRange) result = NumberCE(result).KeepBetween(0, 1) as number;
+    return result;
+}
