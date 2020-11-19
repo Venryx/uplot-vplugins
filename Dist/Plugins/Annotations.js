@@ -53,14 +53,20 @@ export function AnnotationsPlugin(opts) {
                             type: "box",
                             fillStyle: entry.color,
                         }, entry.x != null && {
-                            xMin: entry.x,
+                            //xMin: entry.x,
+                            xMin: typeof entry.x == "number"
+                                ? { type: "valueOnAxis", axisKey: "x", value: entry.x, finalize: a => Math.floor(a) } // floor, to ensure that line stays actually one pixel thick
+                                : entry.x,
                             xSize: { type: "pixelOnCanvas", value: entry.lineWidth },
                             yMin: "min",
                             yMax: "max",
                         }, entry.y != null && {
                             xMin: "min",
                             xMax: "max",
-                            yMin: entry.y,
+                            //yMin: entry.y,
+                            yMin: typeof entry.y == "number"
+                                ? { type: "valueOnAxis", axisKey: "y", value: entry.y, finalize: a => Math.floor(a) } // floor, to ensure that line stays actually one pixel thick
+                                : entry.y,
                             ySize: { type: "pixelOnCanvas", value: entry.lineWidth },
                         });
                         entry = newEntry;

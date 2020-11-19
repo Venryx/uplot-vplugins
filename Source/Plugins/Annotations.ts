@@ -134,7 +134,10 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 								fillStyle: entry.color,
 							} as const,
 							entry.x != null && {
-								xMin: entry.x,
+								//xMin: entry.x,
+								xMin: typeof entry.x == "number"
+									? {type: "valueOnAxis", axisKey: "x", value: entry.x, finalize: a=>Math.floor(a)} as const // floor, to ensure that line stays actually one pixel thick
+									: entry.x,
 								xSize: {type: "pixelOnCanvas", value: entry.lineWidth},
 								yMin: "min",
 								yMax: "max",
@@ -142,7 +145,10 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 							entry.y != null && {
 								xMin: "min",
 								xMax: "max",
-								yMin: entry.y,
+								//yMin: entry.y,
+								yMin: typeof entry.y == "number"
+									? {type: "valueOnAxis", axisKey: "y", value: entry.y, finalize: a=>Math.floor(a)} as const // floor, to ensure that line stays actually one pixel thick
+									: entry.y,
 								ySize: {type: "pixelOnCanvas", value: entry.lineWidth},
 							} as const,
 						);
