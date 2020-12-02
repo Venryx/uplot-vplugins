@@ -61,7 +61,10 @@ export function AnnotationsPlugin(opts) {
                 const { ctx } = u;
                 const { left, top, width, height } = u.bbox;
                 ctx.save();
+                const shouldRenderInfo = { chart: u };
                 for (let entry of opts.annotations) {
+                    if (entry.shouldRender && entry.shouldRender(shouldRenderInfo) == false)
+                        continue;
                     ctx.globalCompositeOperation = (_a = entry.drawType) !== null && _a !== void 0 ? _a : "source-over";
                     if (entry.type == "line") {
                         // add "floor" op to position-indicator (if finalize-op unspecified), to ensure that line stays actually one pixel thick
