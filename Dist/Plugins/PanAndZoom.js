@@ -1,4 +1,4 @@
-import { Assert, E, IsNaN } from "../Utils/FromJSVE";
+import { Assert, E, IsNaN } from "../Utils/FromJSVE.js";
 export class PanAndZoomOptions {
     constructor() {
         this.zoomFactor_x = .75;

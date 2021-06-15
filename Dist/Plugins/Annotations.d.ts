@@ -48,7 +48,5 @@ export declare class AnnotationsOptions {
     annotations: Annotation[];
 }
 export declare function ConvertPosIndicatorToContextPoint(pos: PositionIndicator, chart: uPlot, context: CanvasRenderingContext2D, defaultScaleKey: "x" | "y", defaultFinalize: FinalizeOp): number;
-export declare function AnnotationsPlugin(opts: AnnotationsOptions): {
-    hooks: uPlot.PluginHooks;
-};
+export declare function AnnotationsPlugin(opts: AnnotationsOptions): uPlot.Plugin;
 export {};

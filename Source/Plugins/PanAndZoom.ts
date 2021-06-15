@@ -1,5 +1,5 @@
 import uPlot from "uplot";
-import {Assert, E, IsNaN} from "../Utils/FromJSVE";
+import {Assert, E, IsNaN} from "../Utils/FromJSVE.js";
 
 type Options_OptionalForInitOnly = "zoomFactor_x" | "zoomFactor_y" | "clamp";
 export type PanAndZoomOptions_ForInit = Omit<PanAndZoomOptions, Options_OptionalForInitOnly> & Partial<Pick<PanAndZoomOptions, Options_OptionalForInitOnly>>;
@@ -162,6 +162,6 @@ export function PanAndZoomPlugin(opts_partial: PanAndZoomOptions_ForInit) {
 					});
 				});
 			},
-		} as uPlot.PluginHooks,
-	};
+		},
+	} as uPlot.Plugin;
 }

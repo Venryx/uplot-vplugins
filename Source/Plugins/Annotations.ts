@@ -1,5 +1,5 @@
 import uPlot from "uplot";
-import {Assert, E, IsNaN, Lerp} from "../Utils/FromJSVE";
+import {Assert, E, IsNaN, Lerp} from "../Utils/FromJSVE.js";
 
 /** Mark some properties which only the former including as optional and set the value to never */
 type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
@@ -223,6 +223,6 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 
 				ctx.restore();
 			},
-		} as uPlot.PluginHooks,
-	};
+		},
+	} as uPlot.Plugin;
 }

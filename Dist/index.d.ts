@@ -1,2 +1,2 @@
-export * from "./Plugins/PanAndZoom";
-export * from "./Plugins/Annotations";
+export * from "./Plugins/PanAndZoom.js";
+export * from "./Plugins/Annotations.js";

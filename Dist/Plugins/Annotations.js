@@ -1,4 +1,4 @@
-import { Assert, E, Lerp } from "../Utils/FromJSVE";
+import { Assert, E, Lerp } from "../Utils/FromJSVE.js";
 export class AnnotationsOptions {
 }
 export function ConvertPosIndicatorToContextPoint(pos, chart, context, defaultScaleKey, defaultFinalize) {

@@ -12,7 +12,5 @@ export declare class PanAndZoomOptions {
     yMax: number;
     yRangeMax?: number;
 }
-export declare function PanAndZoomPlugin(opts_partial: PanAndZoomOptions_ForInit): {
-    hooks: uPlot.PluginHooks;
-};
+export declare function PanAndZoomPlugin(opts_partial: PanAndZoomOptions_ForInit): uPlot.Plugin;
 export {};
