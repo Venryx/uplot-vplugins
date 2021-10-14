@@ -120,11 +120,11 @@ export function ConvertPosIndicatorToContextPoint(pos: PositionIndicator, chart:
 	Assert(result != null, `Position/size element cannot be null.`);
 
 	const finalize = pos.finalize !== undefined ? pos.finalize : defaultFinalize;
-	if (pos.finalize != null) {
-		if (pos.finalize == "floor") result = Math.floor(result);
-		else if (pos.finalize == "ceiling") result = Math.ceil(result);
-		else if (pos.finalize == "round") result = Math.round(result);
-		else result = pos.finalize(result);
+	if (finalize != null) {
+		if (finalize == "floor") result = Math.floor(result);
+		else if (finalize == "ceiling") result = Math.ceil(result);
+		else if (finalize == "round") result = Math.round(result);
+		else result = finalize(result);
 	}
 
 	Assert(result != null, `Position/size element cannot be null. (after finalization)`);
