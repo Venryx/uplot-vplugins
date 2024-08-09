@@ -60,11 +60,11 @@ export type Annotation = {
 	shouldRender?: (info: {chart: uPlot})=>boolean;
 	extraData?: any;
 	/** Called at very start of code for entry's for-loop iteration. (well, right after filtering based on entry.shouldRender) */
-	preSetup?: (info: {entry: Annotation, chart: uPlot})=>void;
+	preSetup?: (info: {entry: Annotation, ctx: CanvasRenderingContext2D, chart: uPlot})=>void;
 	/** Called just after setting the canvas context's clip, before doing actual drawing. */
-	preDraw?: (info: {entry: Annotation, chart: uPlot})=>void;
+	preDraw?: (info: {entry: Annotation, ctx: CanvasRenderingContext2D, chart: uPlot})=>void;
 	/** Called after doing the actual drawing for the entry, at end of entry's for-loop iteration. */
-	postDraw?: (info: {entry: Annotation, chart: uPlot})=>void;
+	postDraw?: (info: {entry: Annotation, ctx: CanvasRenderingContext2D, chart: uPlot})=>void;
 } & (
 	XOR<
 	XOR<
@@ -104,6 +104,7 @@ export type Annotation = {
 			strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
 			lineWidth?: number; // reuse prop-names where possible
 			textAlign?: typeof CanvasRenderingContext2D.prototype.textAlign;
+			font?: typeof CanvasRenderingContext2D.prototype.font;
 		}
 	>
 );
@@ -178,7 +179,7 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 				for (let entry of opts.annotations) {
 					if (entry.shouldRender && entry.shouldRender(shouldRenderInfo) == false) continue;
 
-					entry.preSetup?.({entry, chart: u});
+					entry.preSetup?.({entry, ctx, chart: u});
 
 					ctx.globalCompositeOperation = entry.drawType ?? "source-over";
 					if (entry.type == "line") {
@@ -211,7 +212,7 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 					ctx.rect(left, top, width, height);
 					ctx.clip(); // make sure we don't draw outside of chart-bounds
 
-					entry.preDraw?.({entry, chart: u});
+					entry.preDraw?.({entry, ctx, chart: u});
 
 					if (entry.type == "box") {
 						ctx.fillStyle = entry.fillStyle;
@@ -263,11 +264,12 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 						if (entry.strokeStyle) ctx.strokeStyle = entry.strokeStyle;
 						if (entry.lineWidth) ctx.lineWidth = entry.lineWidth;
 						ctx.textAlign = entry.textAlign ?? "center";
+						if (entry.font) ctx.font = entry.font;
 
 						ctx.fillText(entry.text, x, y);
 					}
 
-					entry.postDraw?.({entry, chart: u});
+					entry.postDraw?.({entry, ctx, chart: u});
 				}
 
 				ctx.restore();

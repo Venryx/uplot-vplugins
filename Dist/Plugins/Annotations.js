@@ -70,7 +70,7 @@ export function AnnotationsPlugin(opts) {
                 for (let entry of opts.annotations) {
                     if (entry.shouldRender && entry.shouldRender(shouldRenderInfo) == false)
                         continue;
-                    (_a = entry.preSetup) === null || _a === void 0 ? void 0 : _a.call(entry, { entry, chart: u });
+                    (_a = entry.preSetup) === null || _a === void 0 ? void 0 : _a.call(entry, { entry, ctx, chart: u });
                     ctx.globalCompositeOperation = (_b = entry.drawType) !== null && _b !== void 0 ? _b : "source-over";
                     if (entry.type == "line") {
                         // add "floor" op to position-indicator (if finalize-op unspecified), to ensure that line stays actually one pixel thick
@@ -98,7 +98,7 @@ export function AnnotationsPlugin(opts) {
                     ctx.rect(left, top, width, height);
                     ctx.clip(); // make sure we don't draw outside of chart-bounds
                     (_c = entry.preDraw) === null || _c === void 0 ? void 0 : _c.call(// make sure we don't draw outside of chart-bounds
-                    entry, { entry, chart: u });
+                    entry, { entry, ctx, chart: u });
                     if (entry.type == "box") {
                         ctx.fillStyle = entry.fillStyle;
                         function FillMinMaxAndSizeFrom2(vals) {
@@ -150,9 +150,11 @@ export function AnnotationsPlugin(opts) {
                         if (entry.lineWidth)
                             ctx.lineWidth = entry.lineWidth;
                         ctx.textAlign = (_d = entry.textAlign) !== null && _d !== void 0 ? _d : "center";
+                        if (entry.font)
+                            ctx.font = entry.font;
                         ctx.fillText(entry.text, x, y);
                     }
-                    (_e = entry.postDraw) === null || _e === void 0 ? void 0 : _e.call(entry, { entry, chart: u });
+                    (_e = entry.postDraw) === null || _e === void 0 ? void 0 : _e.call(entry, { entry, ctx, chart: u });
                 }
                 ctx.restore();
             },

@@ -29,16 +29,19 @@ export declare type Annotation = {
     /** Called at very start of code for entry's for-loop iteration. (well, right after filtering based on entry.shouldRender) */
     preSetup?: (info: {
         entry: Annotation;
+        ctx: CanvasRenderingContext2D;
         chart: uPlot;
     }) => void;
     /** Called just after setting the canvas context's clip, before doing actual drawing. */
     preDraw?: (info: {
         entry: Annotation;
+        ctx: CanvasRenderingContext2D;
         chart: uPlot;
     }) => void;
     /** Called after doing the actual drawing for the entry, at end of entry's for-loop iteration. */
     postDraw?: (info: {
         entry: Annotation;
+        ctx: CanvasRenderingContext2D;
         chart: uPlot;
     }) => void;
 } & (XOR<XOR<XOR<{
@@ -69,6 +72,7 @@ export declare type Annotation = {
     strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
     lineWidth?: number;
     textAlign?: typeof CanvasRenderingContext2D.prototype.textAlign;
+    font?: typeof CanvasRenderingContext2D.prototype.font;
 }>);
 declare type Options_OptionalForInitOnly = any;
 export declare type AnnotationsOptions_ForInit = Omit<AnnotationsOptions, Options_OptionalForInitOnly> & Partial<Pick<AnnotationsOptions, Options_OptionalForInitOnly>>;
