@@ -19,6 +19,7 @@ export type PositionIndicator = XOR<{
 }, {
 	//type: "pixelOnCanvas";
 	pixel: number | string;
+	pixel_relToFullCanvas?: boolean;
 
 	finalize?: FinalizeOp;
 }>;
@@ -57,26 +58,54 @@ export type DrawType =
 export type Annotation = {
 	drawType?: DrawType;
 	shouldRender?: (info: {chart: uPlot})=>boolean;
+	extraData?: any;
+	/** Called at very start of code for entry's for-loop iteration. (well, right after filtering based on entry.shouldRender) */
+	preSetup?: (info: {entry: Annotation, chart: uPlot})=>void;
+	/** Called just after setting the canvas context's clip, before doing actual drawing. */
+	preDraw?: (info: {entry: Annotation, chart: uPlot})=>void;
+	/** Called after doing the actual drawing for the entry, at end of entry's for-loop iteration. */
+	postDraw?: (info: {entry: Annotation, chart: uPlot})=>void;
 } & (
-	XOR<{
-		type: "box";
-		xMin?: PositionIndicator;
-		xMax?: PositionIndicator;
-		xSize?: SizeIndicator;
-		yMin?: PositionIndicator;
-		yMax?: PositionIndicator;
-		ySize?: SizeIndicator;
-		fillStyle: typeof CanvasRenderingContext2D.prototype.fillStyle;
-		strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
-		lineWidth?: number;
-	}, {
-		type: "line";
-		x?: PositionIndicator;
-		y?: PositionIndicator;
-		color: typeof CanvasRenderingContext2D.prototype.fillStyle;
-		//width: number;
-		lineWidth: number; // reuse prop-names where possible
-	}>
+	XOR<
+	XOR<
+	XOR<
+		{
+			type: "freeform";
+			// uses the extraData and preDraw/postDraw fields exclusively
+		},
+		{
+			type: "box";
+			xMin?: PositionIndicator;
+			xMax?: PositionIndicator;
+			xSize?: SizeIndicator;
+			yMin?: PositionIndicator;
+			yMax?: PositionIndicator;
+			ySize?: SizeIndicator;
+			fillStyle: typeof CanvasRenderingContext2D.prototype.fillStyle;
+			strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
+			lineWidth?: number;
+		}
+	>,
+		{
+			type: "line";
+			x?: PositionIndicator;
+			y?: PositionIndicator;
+			color: typeof CanvasRenderingContext2D.prototype.fillStyle;
+			//width: number;
+			lineWidth: number; // reuse prop-names where possible
+		}
+	>,
+		{
+			type: "text";
+			x: PositionIndicator;
+			y: PositionIndicator;
+			text: string;
+			fillStyle?: typeof CanvasRenderingContext2D.prototype.fillStyle;
+			strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
+			lineWidth?: number; // reuse prop-names where possible
+			textAlign?: typeof CanvasRenderingContext2D.prototype.textAlign;
+		}
+	>
 );
 
 type Options_OptionalForInitOnly = any;
@@ -102,10 +131,14 @@ export function ConvertPosIndicatorToContextPoint(pos: PositionIndicator, chart:
 	if (pos.value != null) {
 		result = chart.valToPos(pos.value, pos.value_axis ?? defaultScaleKey, pos.value_toCanvasPixels ?? true);
 	} else if (pos.pixel != null) {
+		const {left, top, width, height} = chart.bbox;
 		if (typeof pos.pixel == "number") {
-			result = pos.pixel;
+			if (defaultScaleKey == "x") {
+				result = (pos.pixel_relToFullCanvas ? 0 : left) + pos.pixel;
+			} else {
+				result = (pos.pixel_relToFullCanvas ? 0 : top) + pos.pixel;
+			}
 		} else {
-			const {left, top, width, height} = chart.bbox;
 			const percent = Number(pos.pixel.slice(0, -1)) / 100;
 			if (defaultScaleKey == "x") {
 				result = Lerp(left, left + width, percent);
@@ -145,6 +178,8 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 				for (let entry of opts.annotations) {
 					if (entry.shouldRender && entry.shouldRender(shouldRenderInfo) == false) continue;
 
+					entry.preSetup?.({entry, chart: u});
+
 					ctx.globalCompositeOperation = entry.drawType ?? "source-over";
 					if (entry.type == "line") {
 						// add "floor" op to position-indicator (if finalize-op unspecified), to ensure that line stays actually one pixel thick
@@ -175,6 +210,8 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 					ctx.beginPath();
 					ctx.rect(left, top, width, height);
 					ctx.clip(); // make sure we don't draw outside of chart-bounds
+
+					entry.preDraw?.({entry, chart: u});
 
 					if (entry.type == "box") {
 						ctx.fillStyle = entry.fillStyle;
@@ -218,7 +255,19 @@ export function AnnotationsPlugin(opts: AnnotationsOptions) {
 						ctx.lineTo(cx, height);
 						ctx.closePath();
 						ctx.stroke();
-					}*/
+					}*/ else if (entry.type == "text") {
+						const x = ConvertPosIndicatorToContextPoint(entry.x, u, ctx, "x", "round");
+						const y = ConvertPosIndicatorToContextPoint(entry.y, u, ctx, "y", "round");
+
+						if (entry.fillStyle) ctx.fillStyle = entry.fillStyle;
+						if (entry.strokeStyle) ctx.strokeStyle = entry.strokeStyle;
+						if (entry.lineWidth) ctx.lineWidth = entry.lineWidth;
+						ctx.textAlign = entry.textAlign ?? "center";
+
+						ctx.fillText(entry.text, x, y);
+					}
+
+					entry.postDraw?.({entry, chart: u});
 				}
 
 				ctx.restore();

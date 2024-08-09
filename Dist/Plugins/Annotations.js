@@ -19,11 +19,16 @@ export function ConvertPosIndicatorToContextPoint(pos, chart, context, defaultSc
         result = chart.valToPos(pos.value, (_a = pos.value_axis) !== null && _a !== void 0 ? _a : defaultScaleKey, (_b = pos.value_toCanvasPixels) !== null && _b !== void 0 ? _b : true);
     }
     else if (pos.pixel != null) {
+        const { left, top, width, height } = chart.bbox;
         if (typeof pos.pixel == "number") {
-            result = pos.pixel;
+            if (defaultScaleKey == "x") {
+                result = (pos.pixel_relToFullCanvas ? 0 : left) + pos.pixel;
+            }
+            else {
+                result = (pos.pixel_relToFullCanvas ? 0 : top) + pos.pixel;
+            }
         }
         else {
-            const { left, top, width, height } = chart.bbox;
             const percent = Number(pos.pixel.slice(0, -1)) / 100;
             if (defaultScaleKey == "x") {
                 result = Lerp(left, left + width, percent);
@@ -57,7 +62,7 @@ export function AnnotationsPlugin(opts) {
     return {
         hooks: {
             drawSeries(u, i) {
-                var _a;
+                var _a, _b, _c, _d, _e;
                 const { ctx } = u;
                 const { left, top, width, height } = u.bbox;
                 ctx.save();
@@ -65,7 +70,8 @@ export function AnnotationsPlugin(opts) {
                 for (let entry of opts.annotations) {
                     if (entry.shouldRender && entry.shouldRender(shouldRenderInfo) == false)
                         continue;
-                    ctx.globalCompositeOperation = (_a = entry.drawType) !== null && _a !== void 0 ? _a : "source-over";
+                    (_a = entry.preSetup) === null || _a === void 0 ? void 0 : _a.call(entry, { entry, chart: u });
+                    ctx.globalCompositeOperation = (_b = entry.drawType) !== null && _b !== void 0 ? _b : "source-over";
                     if (entry.type == "line") {
                         // add "floor" op to position-indicator (if finalize-op unspecified), to ensure that line stays actually one pixel thick
                         if (entry.x && entry.x.finalize === undefined)
@@ -91,6 +97,8 @@ export function AnnotationsPlugin(opts) {
                     ctx.beginPath();
                     ctx.rect(left, top, width, height);
                     ctx.clip(); // make sure we don't draw outside of chart-bounds
+                    (_c = entry.preDraw) === null || _c === void 0 ? void 0 : _c.call(// make sure we don't draw outside of chart-bounds
+                    entry, { entry, chart: u });
                     if (entry.type == "box") {
                         ctx.fillStyle = entry.fillStyle;
                         function FillMinMaxAndSizeFrom2(vals) {
@@ -132,6 +140,19 @@ export function AnnotationsPlugin(opts) {
                         ctx.closePath();
                         ctx.stroke();
                     }*/
+                    else if (entry.type == "text") {
+                        const x = ConvertPosIndicatorToContextPoint(entry.x, u, ctx, "x", "round");
+                        const y = ConvertPosIndicatorToContextPoint(entry.y, u, ctx, "y", "round");
+                        if (entry.fillStyle)
+                            ctx.fillStyle = entry.fillStyle;
+                        if (entry.strokeStyle)
+                            ctx.strokeStyle = entry.strokeStyle;
+                        if (entry.lineWidth)
+                            ctx.lineWidth = entry.lineWidth;
+                        ctx.textAlign = (_d = entry.textAlign) !== null && _d !== void 0 ? _d : "center";
+                        ctx.fillText(entry.text, x, y);
+                    }
+                    (_e = entry.postDraw) === null || _e === void 0 ? void 0 : _e.call(entry, { entry, chart: u });
                 }
                 ctx.restore();
             },

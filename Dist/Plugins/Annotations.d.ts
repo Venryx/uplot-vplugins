@@ -14,6 +14,7 @@ export declare type PositionIndicator = XOR<{
     finalize?: FinalizeOp;
 }, {
     pixel: number | string;
+    pixel_relToFullCanvas?: boolean;
     finalize?: FinalizeOp;
 }>;
 export declare type SizeIndicator = PositionIndicator;
@@ -24,7 +25,25 @@ export declare type Annotation = {
     shouldRender?: (info: {
         chart: uPlot;
     }) => boolean;
-} & (XOR<{
+    extraData?: any;
+    /** Called at very start of code for entry's for-loop iteration. (well, right after filtering based on entry.shouldRender) */
+    preSetup?: (info: {
+        entry: Annotation;
+        chart: uPlot;
+    }) => void;
+    /** Called just after setting the canvas context's clip, before doing actual drawing. */
+    preDraw?: (info: {
+        entry: Annotation;
+        chart: uPlot;
+    }) => void;
+    /** Called after doing the actual drawing for the entry, at end of entry's for-loop iteration. */
+    postDraw?: (info: {
+        entry: Annotation;
+        chart: uPlot;
+    }) => void;
+} & (XOR<XOR<XOR<{
+    type: "freeform";
+}, {
     type: "box";
     xMin?: PositionIndicator;
     xMax?: PositionIndicator;
@@ -35,12 +54,21 @@ export declare type Annotation = {
     fillStyle: typeof CanvasRenderingContext2D.prototype.fillStyle;
     strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
     lineWidth?: number;
-}, {
+}>, {
     type: "line";
     x?: PositionIndicator;
     y?: PositionIndicator;
     color: typeof CanvasRenderingContext2D.prototype.fillStyle;
     lineWidth: number;
+}>, {
+    type: "text";
+    x: PositionIndicator;
+    y: PositionIndicator;
+    text: string;
+    fillStyle?: typeof CanvasRenderingContext2D.prototype.fillStyle;
+    strokeStyle?: typeof CanvasRenderingContext2D.prototype.strokeStyle;
+    lineWidth?: number;
+    textAlign?: typeof CanvasRenderingContext2D.prototype.textAlign;
 }>);
 declare type Options_OptionalForInitOnly = any;
 export declare type AnnotationsOptions_ForInit = Omit<AnnotationsOptions, Options_OptionalForInitOnly> & Partial<Pick<AnnotationsOptions, Options_OptionalForInitOnly>>;

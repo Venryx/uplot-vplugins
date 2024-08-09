@@ -1,18 +1,63 @@
 import uPlot from "uplot";
-import {distr, SPACE_BETWEEN} from "../Utils/@Ext/Distr.js";
+import {distr, SPACE_AROUND, SPACE_BETWEEN, SPACE_EVENLY} from "../Utils/@Ext/Distr.js";
 import {pointWithin, Quadtree} from "../Utils/@Ext/QuadTree.js";
 import {Assert} from "../Utils/FromJSVE.js";
 
-export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: boolean, ignore?: number[], radius?: number, disp?: any, color?: string}) {
-	let pxRatio;
-	let font;
+export type Orientation = "horizontal" | "vertical";
+export function GetOrientationValue(orientation: Orientation) {
+	if (orientation == "horizontal") return 0;
+	if (orientation == "vertical") return 1;
+	Assert(false, `Invalid orientation value: ${orientation}`);
+}
 
-	const {ignore = []} = opts;
+export type Direction = "positive" | "negative";
+export function GetDirectionValue(direction: Direction) {
+	if (direction == "positive") return 1;
+	if (direction == "negative") return -1;
+	Assert(false, `Invalid direction value: ${direction}`);
+}
+
+export type Distribution = "spaceBetween" | "spaceAround" | "spaceEvenly";
+export function GetDistributionValue(distribution: Distribution) {
+	if (distribution == "spaceBetween") return SPACE_BETWEEN;
+	if (distribution == "spaceAround") return SPACE_AROUND;
+	if (distribution == "spaceEvenly") return SPACE_EVENLY;
+	Assert(false, `Invalid distribution value: ${distribution}`);
+}
+
+export type GroupedBarsPluginOptionsInput = Exclude<ConstructorParameters<typeof GroupedBarsPluginOptions>[0], undefined>;
+export class GroupedBarsPluginOptions {
+	constructor(data?: Partial<GroupedBarsPluginOptions>) {
+		Object.assign(this, data);
+	}
+	ori: Orientation = "horizontal";
+	dir: Direction = "positive";
+	stacked = false;
+	ignore: number[] = [];
+	radius = 0;
+	disp?: any;
 
 	// custom
-	const color = opts.color ?? "black";
+	color = "black";
+	visualGroupDistribution: Distribution = "spaceBetween";
+	barDistribution: Distribution = "spaceBetween";
+	/** Given a certain space of "1" that covers the entire plotting area, how much of that space (.1 = 10%) is used for the gaps between visual-groups? */
+	gapBetweenVisualGroups = 0.1;
+	/** Given a certain space of "1" that a visual-group has for rendering itself (excludes any gaps between visual-group itself and its neighbors), how much of that space (.1 = 10%) is used for the gaps between its bars? */
+	gapBetweenBars = 0;
 
-	const radius = opts.radius ?? 0;
+	// helpers for sending to uplot
+	get Ori_Val() { return GetOrientationValue(this.ori); }
+	get Dir_Val() { return GetDirectionValue(this.dir); }
+	get VisualGroupDistribution_Val() { return GetDistributionValue(this.visualGroupDistribution); }
+	get BarDistribution_Val() { return GetDistributionValue(this.barDistribution); }
+}
+
+export function GroupedBarsPlugin(options: GroupedBarsPluginOptionsInput): uPlot.Plugin {
+	const opt = new GroupedBarsPluginOptions(options);
+
+	let pxRatio;
+	let font;
 
 	function setPxRatio() {
 		pxRatio = devicePixelRatio;
@@ -23,15 +68,9 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 
 	window.addEventListener("dppxchange", setPxRatio);
 
-	const ori = opts.ori;
-	const dir = opts.dir;
-	const stacked = opts.stacked;
-
-	const groupWidth = 0.9;
-	const groupDistr = SPACE_BETWEEN;
-
-	const barWidth = 1;
-	const barDistr = SPACE_BETWEEN;
+	// calc based on opts above
+	const groupWidth = 1 - opt.gapBetweenVisualGroups;
+	const barWidth = 1 - opt.gapBetweenBars;
 
 	function distrTwo(groupCount, barCount, barSpread = true, _groupWidth = groupWidth) {
 		const out = Array.from({length: barCount}, ()=>({
@@ -39,8 +78,8 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 			size: Array(groupCount).fill(0),
 		}));
 
-		distr(groupCount, _groupWidth, groupDistr, null, (groupIdx, groupOffPct, groupDimPct)=>{
-			distr(barCount, barWidth, barDistr, null, (barIdx, barOffPct, barDimPct)=>{
+		distr(groupCount, _groupWidth, opt.VisualGroupDistribution_Val, null, (groupIdx, groupOffPct, groupDimPct)=>{
+			distr(barCount, barWidth, opt.BarDistribution_Val, null, (barIdx, barOffPct, barDimPct)=>{
 				out[barIdx].offs[groupIdx] = groupOffPct + (barSpread ? (groupDimPct * barOffPct) : 0);
 				out[barIdx].size[groupIdx] = groupDimPct * (barSpread ? barDimPct : 1);
 			});
@@ -53,7 +92,7 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 	let barsColors;
 
 	const barsBuilder = uPlot.paths.bars!({
-		radius,
+		radius: opt.radius,
 		disp: {
 			x0: {
 				unit: 2,
@@ -65,7 +104,7 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 				//	discr: true,
 				values: (u, seriesIdx, idx0, idx1)=>barsPctLayout[seriesIdx].size,
 			},
-			...opts.disp,
+			...opt.disp,
 			/*
 				// e.g. variable size via scale (will compute offsets from known values)
 				x1: {
@@ -86,10 +125,10 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 		u.ctx.save();
 
 		u.ctx.font = font;
-		u.ctx.fillStyle = color;
+		u.ctx.fillStyle = opt.color;
 
 		uPlot.orient(u, sidx, (series, dataX, dataY, scaleX, scaleY, valToPosX, valToPosY, xOff, yOff, xDim, yDim, moveTo, lineTo, rect)=>{
-			const _dir = dir * (ori == 0 ? 1 : -1);
+			const _dir = opt.Dir_Val * (opt.ori == "horizontal" ? 1 : -1);
 
 			const wid = Math.round(barsPctLayout[sidx].size[0] * xDim);
 
@@ -101,11 +140,11 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 
 					const yPos = valToPosY(dataY[ix] as any, scaleY, yDim, yOff);
 
-					const x = ori == 0 ? Math.round(lft + barWid / 2) : Math.round(yPos);
-					const y = ori == 0 ? Math.round(yPos) : Math.round(lft + barWid / 2);
+					const x = opt.ori == "horizontal" ? Math.round(lft + barWid / 2) : Math.round(yPos);
+					const y = opt.ori == "horizontal" ? Math.round(yPos) : Math.round(lft + barWid / 2);
 
-					u.ctx.textAlign = ori == 0 ? "center" : dataY[ix] as any >= 0 ? "left" : "right";
-					u.ctx.textBaseline = ori == 1 ? "middle" : dataY[ix] as any >= 0 ? "bottom" : "top";
+					u.ctx.textAlign = opt.ori == "horizontal" ? "center" : dataY[ix] as any >= 0 ? "left" : "right";
+					u.ctx.textBaseline = opt.ori == "vertical" ? "middle" : dataY[ix] as any >= 0 ? "bottom" : "top";
 
 					u.ctx.fillText(dataY[ix], x, y);
 				}
@@ -134,31 +173,31 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 					(s as any)._paths = null;
 				});
 
-				barsPctLayout = ([null] as any[]).concat(distrTwo(u.data[0].length, u.series.length - 1 - ignore.length, !stacked, groupWidth));
+				barsPctLayout = ([null] as any[]).concat(distrTwo(u.data[0].length, u.series.length - 1 - opt.ignore.length, !opt.stacked, groupWidth));
 
 				// TODOL only do on setData, not every redraw
-				if (opts.disp?.fill != null) {
+				if (opt.disp?.fill != null) {
 					barsColors = [null];
 
 					for (let i = 1; i < u.data.length; i++) {
 						barsColors.push({
-							fill: opts.disp.fill.values(u, i),
-							stroke: opts.disp.stroke.values(u, i),
+							fill: opt.disp.fill.values(u, i),
+							stroke: opt.disp.stroke.values(u, i),
 						});
 					}
 				}
 			},
 		},
-		opts: (u, opts)=>{
+		opts: (u, uplotOpts)=>{
 			const yScaleOpts = {
 				range,
-				ori: ori == 0 ? 1 : 0,
+				ori: opt.ori == "horizontal" ? 1 : 0,
 			};
 
 			// hovered
 			let hRect;
 
-			uPlot.assign(opts, {
+			uPlot.assign(uplotOpts, {
 				select: {show: false},
 				cursor: {
 					x: false,
@@ -195,8 +234,8 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 					x: {
 						time: false,
 						distr: 2,
-						ori,
-						dir,
+						ori: opt.Ori_Val,
+						dir: opt.Dir_Val,
 						//	auto: true,
 						range: (u, min, max)=>{
 							min = 0;
@@ -204,7 +243,7 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 
 							let pctOffset = 0;
 
-							distr(u.data[0].length, groupWidth, groupDistr, 0, (di, lftPct, widPct)=>{
+							distr(u.data[0].length, groupWidth, opt.VisualGroupDistribution_Val, 0, (di, lftPct, widPct)=>{
 								pctOffset = lftPct + widPct / 2;
 							});
 
@@ -230,29 +269,29 @@ export function GroupedBarsPlugin(opts: {ori: number, dir: number, stacked: bool
 				},
 			});
 
-			if (ori == 1) {
-				opts.padding = [0, null, 0, null];
+			if (opt.ori == "vertical") {
+				uplotOpts.padding = [0, null, 0, null];
 			}
 
-			Assert(opts.axes?.[0] != null, "Expected opts.axes[0] to be set.");
-			uPlot.assign(opts.axes[0], {
+			Assert(uplotOpts.axes?.[0] != null, "Expected opts.axes[0] to be set.");
+			uPlot.assign(uplotOpts.axes[0], {
 				splits: (u, axisIdx)=>{
-					const _dir = dir * (ori == 0 ? 1 : -1);
+					const _dir = opt.Dir_Val * (opt.ori == "horizontal" ? 1 : -1);
 					const splits = u._data[0].slice();
 					return _dir == 1 ? splits : splits.reverse();
 				},
 				values: u=>u.data[0],
 				gap: 15,
-				size: ori == 0 ? 40 : 150,
+				size: opt.ori == "horizontal" ? 40 : 150,
 				labelSize: 20,
 				grid: {show: false},
 				ticks: {show: false},
 
-				side: ori == 0 ? 2 : 3,
+				side: opt.ori == "horizontal" ? 2 : 3,
 			});
 
-			opts.series.forEach((s, i)=>{
-				if (i > 0 && !ignore.includes(i)) {
+			uplotOpts.series.forEach((s, i)=>{
+				if (i > 0 && !opt.ignore.includes(i)) {
 					uPlot.assign(s, {
 						//	pxAlign: false,
 						//	stroke: "rgba(255,0,0,0.5)",
