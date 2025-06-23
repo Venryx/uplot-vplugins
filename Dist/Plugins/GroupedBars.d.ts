@@ -26,4 +26,9 @@ export declare class GroupedBarsPluginOptions {
     get VisualGroupDistribution_Val(): 1 | 2 | 3;
     get BarDistribution_Val(): 1 | 2 | 3;
 }
-export declare function GroupedBarsPlugin(options: GroupedBarsPluginOptionsInput): uPlot.Plugin;
+export declare class GroupedBarsPlugin implements uPlot.Plugin {
+    constructor(options: GroupedBarsPluginOptionsInput);
+    options: GroupedBarsPluginOptions;
+    hooks: uPlot.Hooks.Defs;
+    opts?: (self: uPlot, opts: uPlot.Options) => void | uPlot.Options;
+}

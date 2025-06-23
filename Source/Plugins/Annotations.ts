@@ -112,7 +112,8 @@ export type Annotation = {
 type Options_OptionalForInitOnly = any;
 export type AnnotationsOptions_ForInit = Omit<AnnotationsOptions, Options_OptionalForInitOnly> & Partial<Pick<AnnotationsOptions, Options_OptionalForInitOnly>>;
 export class AnnotationsOptions {
-	annotations: Annotation[];
+	constructor(opts?: Partial<AnnotationsOptions>) { Object.assign(this, opts); }
+	annotations = [] as Annotation[];
 }
 
 export function ConvertPosIndicatorToContextPoint(pos: PositionIndicator, chart: uPlot, context: CanvasRenderingContext2D, defaultScaleKey: "x" | "y", defaultFinalize: FinalizeOp) {
@@ -165,115 +166,117 @@ export function ConvertPosIndicatorToContextPoint(pos: PositionIndicator, chart:
 	return result;
 }
 
-export function AnnotationsPlugin(opts: AnnotationsOptions) {
-	opts = E(new AnnotationsOptions(), opts);
+export class AnnotationsPlugin implements uPlot.Plugin {
+	constructor(options: ConstructorParameters<typeof AnnotationsOptions>[0]) {
+		this.options = new AnnotationsOptions(options);
+	}
+	options: AnnotationsOptions;
 
-	return {
-		hooks: {
-			drawSeries(u, i) {
-				const {ctx} = u;
-				const {left, top, width, height} = u.bbox;
-				ctx.save();
+	hooks: uPlot.Hooks.Defs = {
+		drawSeries: (u: uPlot, seriesIdx: number)=>{
+			const opts = this.options;
+			const {ctx} = u;
+			const {left, top, width, height} = u.bbox;
+			ctx.save();
 
-				const shouldRenderInfo = {chart: u};
-				for (let entry of opts.annotations) {
-					if (entry.shouldRender && entry.shouldRender(shouldRenderInfo) == false) continue;
+			const shouldRenderInfo = {chart: u};
+			for (let entry of opts.annotations) {
+				if (entry.shouldRender && entry.shouldRender(shouldRenderInfo) == false) continue;
 
-					entry.preSetup?.({entry, ctx, chart: u});
+				entry.preSetup?.({entry, ctx, chart: u});
 
-					ctx.globalCompositeOperation = entry.drawType ?? "source-over";
-					if (entry.type == "line") {
-						// add "floor" op to position-indicator (if finalize-op unspecified), to ensure that line stays actually one pixel thick
-						if (entry.x && entry.x.finalize === undefined) entry.x.finalize = a=>Math.floor(a);
-						if (entry.y && entry.y.finalize === undefined) entry.y.finalize = a=>Math.floor(a);
+				ctx.globalCompositeOperation = entry.drawType ?? "source-over";
+				if (entry.type == "line") {
+					// add "floor" op to position-indicator (if finalize-op unspecified), to ensure that line stays actually one pixel thick
+					if (entry.x && entry.x.finalize === undefined) entry.x.finalize = a=>Math.floor(a);
+					if (entry.y && entry.y.finalize === undefined) entry.y.finalize = a=>Math.floor(a);
 
-						const newEntry: Annotation = E(
-							{
-								type: "box",
-								fillStyle: entry.color,
-							} as const,
-							entry.x != null && {
-								xMin: entry.x,
-								xSize: {pixel: entry.lineWidth},
-								yMin: {pixel: "0%"},
-								yMax: {pixel: "100%"},
-							} as const,
-							entry.y != null && {
-								xMin: {pixel: "0%"},
-								xMax: {pixel: "100%"},
-								yMin: entry.y,
-								ySize: {pixel: entry.lineWidth},
-							} as const,
-						);
-						entry = newEntry;
-					}
-
-					ctx.beginPath();
-					ctx.rect(left, top, width, height);
-					ctx.clip(); // make sure we don't draw outside of chart-bounds
-
-					entry.preDraw?.({entry, ctx, chart: u});
-
-					if (entry.type == "box") {
-						ctx.fillStyle = entry.fillStyle;
-
-						function FillMinMaxAndSizeFrom2(vals: (number|null|undefined)[]) {
-							return vals.map((val, i): number=>{
-								if (val != null) return val;
-								if (i == 0) return vals[1]! - vals[2]!;
-								if (i == 1) return vals[0]! + vals[2]!;
-								/*if (i == 2)*/
-								Assert(i == 2);
-								return vals[1]! - vals[0]!;
-							});
-						}
-
-						//const indexToType = ["min", "max", "size"];
-						const indexToDefaultFinalize = ["floor", "ceiling", "ceiling"] as const;
-						const xVals = [entry.xMin, entry.xMax, entry.xSize];
-						Assert(xVals.filter(a=>a != null).length == 2, "Exactly two of these should be specified: xMin, xMax, xSize");
-						const xVals_ctx = xVals.map((val, i)=>(val != null ? ConvertPosIndicatorToContextPoint(val, u, ctx, "x", indexToDefaultFinalize[i]) : null));
-						const xVals_ctx_final = FillMinMaxAndSizeFrom2(xVals_ctx);
-
-						const yVals = [entry.yMin, entry.yMax, entry.ySize];
-						Assert(yVals.filter(a=>a != null).length == 2, "Exactly two of these should be specified: yMin, yMax, ySize");
-						const yVals_ctx = yVals.map((val, i)=>(val != null ? ConvertPosIndicatorToContextPoint(val, u, ctx, "y", indexToDefaultFinalize[i]) : null));
-						const yVals_ctx_final = FillMinMaxAndSizeFrom2(yVals_ctx);
-
-						ctx.fillRect(xVals_ctx_final[0], yVals_ctx_final[0], xVals_ctx_final[2], yVals_ctx_final[2]);
-
-						if (entry.lineWidth! > 0) {
-							ctx.strokeStyle = entry.strokeStyle!;
-							ctx.lineWidth = entry.lineWidth!;
-							ctx.rect(xVals_ctx_final[0], yVals_ctx_final[0], xVals_ctx_final[2], yVals_ctx_final[2]);
-						}
-					} /*else if (entry.type == "line") {
-						ctx.strokeStyle = entry.strokeStyle;
-						ctx.lineWidth = entry.lineWidth;
-
-						ctx.beginPath();
-						ctx.moveTo(cx, top);
-						ctx.lineTo(cx, height);
-						ctx.closePath();
-						ctx.stroke();
-					}*/ else if (entry.type == "text") {
-						const x = ConvertPosIndicatorToContextPoint(entry.x, u, ctx, "x", "round");
-						const y = ConvertPosIndicatorToContextPoint(entry.y, u, ctx, "y", "round");
-
-						if (entry.fillStyle) ctx.fillStyle = entry.fillStyle;
-						if (entry.strokeStyle) ctx.strokeStyle = entry.strokeStyle;
-						if (entry.lineWidth) ctx.lineWidth = entry.lineWidth;
-						ctx.textAlign = entry.textAlign ?? "center";
-						if (entry.font) ctx.font = entry.font;
-
-						ctx.fillText(entry.text, x, y);
-					}
-
-					entry.postDraw?.({entry, ctx, chart: u});
+					const newEntry: Annotation = E(
+						{
+							type: "box",
+							fillStyle: entry.color,
+						} as const,
+						entry.x != null && {
+							xMin: entry.x,
+							xSize: {pixel: entry.lineWidth},
+							yMin: {pixel: "0%"},
+							yMax: {pixel: "100%"},
+						} as const,
+						entry.y != null && {
+							xMin: {pixel: "0%"},
+							xMax: {pixel: "100%"},
+							yMin: entry.y,
+							ySize: {pixel: entry.lineWidth},
+						} as const,
+					);
+					entry = newEntry;
 				}
 
-				ctx.restore();
-			},
+				ctx.beginPath();
+				ctx.rect(left, top, width, height);
+				ctx.clip(); // make sure we don't draw outside of chart-bounds
+
+				entry.preDraw?.({entry, ctx, chart: u});
+
+				if (entry.type == "box") {
+					ctx.fillStyle = entry.fillStyle;
+
+					function FillMinMaxAndSizeFrom2(vals: (number|null|undefined)[]) {
+						return vals.map((val, i): number=>{
+							if (val != null) return val;
+							if (i == 0) return vals[1]! - vals[2]!;
+							if (i == 1) return vals[0]! + vals[2]!;
+							/*if (i == 2)*/
+							Assert(i == 2);
+							return vals[1]! - vals[0]!;
+						});
+					}
+
+					//const indexToType = ["min", "max", "size"];
+					const indexToDefaultFinalize = ["floor", "ceiling", "ceiling"] as const;
+					const xVals = [entry.xMin, entry.xMax, entry.xSize];
+					Assert(xVals.filter(a=>a != null).length == 2, "Exactly two of these should be specified: xMin, xMax, xSize");
+					const xVals_ctx = xVals.map((val, i)=>(val != null ? ConvertPosIndicatorToContextPoint(val, u, ctx, "x", indexToDefaultFinalize[i]) : null));
+					const xVals_ctx_final = FillMinMaxAndSizeFrom2(xVals_ctx);
+
+					const yVals = [entry.yMin, entry.yMax, entry.ySize];
+					Assert(yVals.filter(a=>a != null).length == 2, "Exactly two of these should be specified: yMin, yMax, ySize");
+					const yVals_ctx = yVals.map((val, i)=>(val != null ? ConvertPosIndicatorToContextPoint(val, u, ctx, "y", indexToDefaultFinalize[i]) : null));
+					const yVals_ctx_final = FillMinMaxAndSizeFrom2(yVals_ctx);
+
+					ctx.fillRect(xVals_ctx_final[0], yVals_ctx_final[0], xVals_ctx_final[2], yVals_ctx_final[2]);
+
+					if (entry.lineWidth! > 0) {
+						ctx.strokeStyle = entry.strokeStyle!;
+						ctx.lineWidth = entry.lineWidth!;
+						ctx.rect(xVals_ctx_final[0], yVals_ctx_final[0], xVals_ctx_final[2], yVals_ctx_final[2]);
+					}
+				} /*else if (entry.type == "line") {
+					ctx.strokeStyle = entry.strokeStyle;
+					ctx.lineWidth = entry.lineWidth;
+
+					ctx.beginPath();
+					ctx.moveTo(cx, top);
+					ctx.lineTo(cx, height);
+					ctx.closePath();
+					ctx.stroke();
+				}*/ else if (entry.type == "text") {
+					const x = ConvertPosIndicatorToContextPoint(entry.x, u, ctx, "x", "round");
+					const y = ConvertPosIndicatorToContextPoint(entry.y, u, ctx, "y", "round");
+
+					if (entry.fillStyle) ctx.fillStyle = entry.fillStyle;
+					if (entry.strokeStyle) ctx.strokeStyle = entry.strokeStyle;
+					if (entry.lineWidth) ctx.lineWidth = entry.lineWidth;
+					ctx.textAlign = entry.textAlign ?? "center";
+					if (entry.font) ctx.font = entry.font;
+
+					ctx.fillText(entry.text, x, y);
+				}
+
+				entry.postDraw?.({entry, ctx, chart: u});
+			}
+
+			ctx.restore();
 		},
-	} as uPlot.Plugin;
+	}
 }

@@ -1,5 +1,9 @@
 import { Assert, E, Lerp } from "../Utils/FromJSVE.js";
 export class AnnotationsOptions {
+    constructor(opts) {
+        this.annotations = [];
+        Object.assign(this, opts);
+    }
 }
 export function ConvertPosIndicatorToContextPoint(pos, chart, context, defaultScaleKey, defaultFinalize) {
     /*if (typeof pos == "number") {
@@ -57,12 +61,12 @@ export function ConvertPosIndicatorToContextPoint(pos, chart, context, defaultSc
     Assert(result != null, `Position/size element cannot be null. (after finalization)`);
     return result;
 }
-export function AnnotationsPlugin(opts) {
-    opts = E(new AnnotationsOptions(), opts);
-    return {
-        hooks: {
-            drawSeries(u, i) {
+export class AnnotationsPlugin {
+    constructor(options) {
+        this.hooks = {
+            drawSeries: (u, seriesIdx) => {
                 var _a, _b, _c, _d, _e;
+                const opts = this.options;
                 const { ctx } = u;
                 const { left, top, width, height } = u.bbox;
                 ctx.save();
@@ -133,7 +137,7 @@ export function AnnotationsPlugin(opts) {
                     } /*else if (entry.type == "line") {
                         ctx.strokeStyle = entry.strokeStyle;
                         ctx.lineWidth = entry.lineWidth;
-
+    
                         ctx.beginPath();
                         ctx.moveTo(cx, top);
                         ctx.lineTo(cx, height);
@@ -158,6 +162,7 @@ export function AnnotationsPlugin(opts) {
                 }
                 ctx.restore();
             },
-        },
-    };
+        };
+        this.options = new AnnotationsOptions(options);
+    }
 }

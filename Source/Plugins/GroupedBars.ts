@@ -53,116 +53,114 @@ export class GroupedBarsPluginOptions {
 	get BarDistribution_Val() { return GetDistributionValue(this.barDistribution); }
 }
 
-export function GroupedBarsPlugin(options: GroupedBarsPluginOptionsInput): uPlot.Plugin {
-	const opt = new GroupedBarsPluginOptions(options);
+export class GroupedBarsPlugin implements uPlot.Plugin {
+	constructor(options: GroupedBarsPluginOptionsInput) {
+		this.options = new GroupedBarsPluginOptions(options);
+		const opt = this.options;
 
-	let pxRatio;
-	let font;
+		let pxRatio;
+		let font;
+		function setPxRatio() {
+			pxRatio = devicePixelRatio;
+			font = `${Math.round(10 * pxRatio)}px Arial`;
+		}
+		setPxRatio();
+		window.addEventListener("dppxchange", setPxRatio);
 
-	function setPxRatio() {
-		pxRatio = devicePixelRatio;
-		font = `${Math.round(10 * pxRatio)}px Arial`;
-	}
+		// calc based on opts above
+		const groupWidth = 1 - opt.gapBetweenVisualGroups;
+		const barWidth = 1 - opt.gapBetweenBars;
 
-	setPxRatio();
+		function distrTwo(groupCount, barCount, barSpread = true, _groupWidth = groupWidth) {
+			const out = Array.from({length: barCount}, ()=>({
+				offs: Array(groupCount).fill(0),
+				size: Array(groupCount).fill(0),
+			}));
 
-	window.addEventListener("dppxchange", setPxRatio);
-
-	// calc based on opts above
-	const groupWidth = 1 - opt.gapBetweenVisualGroups;
-	const barWidth = 1 - opt.gapBetweenBars;
-
-	function distrTwo(groupCount, barCount, barSpread = true, _groupWidth = groupWidth) {
-		const out = Array.from({length: barCount}, ()=>({
-			offs: Array(groupCount).fill(0),
-			size: Array(groupCount).fill(0),
-		}));
-
-		distr(groupCount, _groupWidth, opt.VisualGroupDistribution_Val, null, (groupIdx, groupOffPct, groupDimPct)=>{
-			distr(barCount, barWidth, opt.BarDistribution_Val, null, (barIdx, barOffPct, barDimPct)=>{
-				out[barIdx].offs[groupIdx] = groupOffPct + (barSpread ? (groupDimPct * barOffPct) : 0);
-				out[barIdx].size[groupIdx] = groupDimPct * (barSpread ? barDimPct : 1);
+			distr(groupCount, _groupWidth, opt.VisualGroupDistribution_Val, null, (groupIdx, groupOffPct, groupDimPct)=>{
+				distr(barCount, barWidth, opt.BarDistribution_Val, null, (barIdx, barOffPct, barDimPct)=>{
+					out[barIdx].offs[groupIdx] = groupOffPct + (barSpread ? (groupDimPct * barOffPct) : 0);
+					out[barIdx].size[groupIdx] = groupDimPct * (barSpread ? barDimPct : 1);
+				});
 			});
-		});
 
-		return out;
-	}
+			return out;
+		}
 
-	let barsPctLayout;
-	let barsColors;
+		let barsPctLayout;
+		let barsColors;
 
-	const barsBuilder = uPlot.paths.bars!({
-		radius: opt.radius,
-		disp: {
-			x0: {
-				unit: 2,
-				//	discr: false, (unary, discrete, continuous)
-				values: (u, seriesIdx, idx0, idx1)=>barsPctLayout[seriesIdx].offs,
-			},
-			size: {
-				unit: 2,
-				//	discr: true,
-				values: (u, seriesIdx, idx0, idx1)=>barsPctLayout[seriesIdx].size,
-			},
-			...opt.disp,
-			/*
-				// e.g. variable size via scale (will compute offsets from known values)
-				x1: {
-					units: 1,
-					values: (u, seriesIdx, idx0, idx1) => bucketEnds[idx],
+		const barsBuilder = uPlot.paths.bars!({
+			radius: opt.radius,
+			disp: {
+				x0: {
+					unit: 2,
+					//	discr: false, (unary, discrete, continuous)
+					values: (u, seriesIdx, idx0, idx1)=>barsPctLayout[seriesIdx].offs,
 				},
-			*/
-		},
-		each: (u, seriesIdx, dataIdx, lft, top, wid, hgt)=>{
-			// we get back raw canvas coords (included axes & padding). translate to the plotting area origin
-			lft -= u.bbox.left;
-			top -= u.bbox.top;
-			qt.add({x: lft, y: top, w: wid, h: hgt, sidx: seriesIdx, didx: dataIdx});
-		},
-	} as any);
+				size: {
+					unit: 2,
+					//	discr: true,
+					values: (u, seriesIdx, idx0, idx1)=>barsPctLayout[seriesIdx].size,
+				},
+				...opt.disp,
+				/*
+					// e.g. variable size via scale (will compute offsets from known values)
+					x1: {
+						units: 1,
+						values: (u, seriesIdx, idx0, idx1) => bucketEnds[idx],
+					},
+				*/
+			},
+			each: (u, seriesIdx, dataIdx, lft, top, wid, hgt)=>{
+				// we get back raw canvas coords (included axes & padding). translate to the plotting area origin
+				lft -= u.bbox.left;
+				top -= u.bbox.top;
+				qt.add({x: lft, y: top, w: wid, h: hgt, sidx: seriesIdx, didx: dataIdx});
+			},
+		} as any);
 
-	function drawPoints(u, sidx, i0, i1) {
-		u.ctx.save();
+		function drawPoints(u, sidx, i0, i1) {
+			u.ctx.save();
 
-		u.ctx.font = font;
-		u.ctx.fillStyle = opt.color;
+			u.ctx.font = font;
+			u.ctx.fillStyle = opt.color;
 
-		uPlot.orient(u, sidx, (series, dataX, dataY, scaleX, scaleY, valToPosX, valToPosY, xOff, yOff, xDim, yDim, moveTo, lineTo, rect)=>{
-			const _dir = opt.Dir_Val * (opt.ori == "horizontal" ? 1 : -1);
+			uPlot.orient(u, sidx, (series, dataX, dataY, scaleX, scaleY, valToPosX, valToPosY, xOff, yOff, xDim, yDim, moveTo, lineTo, rect)=>{
+				const _dir = opt.Dir_Val * (opt.ori == "horizontal" ? 1 : -1);
 
-			const wid = Math.round(barsPctLayout[sidx].size[0] * xDim);
+				const wid = Math.round(barsPctLayout[sidx].size[0] * xDim);
 
-			barsPctLayout[sidx].offs.forEach((offs, ix)=>{
-				if (dataY[ix] != null) {
-					const x0 = xDim * offs;
-					const lft = Math.round(xOff + (_dir == 1 ? x0 : xDim - x0 - wid));
-					const barWid = Math.round(wid);
+				barsPctLayout[sidx].offs.forEach((offs, ix)=>{
+					if (dataY[ix] != null) {
+						const x0 = xDim * offs;
+						const lft = Math.round(xOff + (_dir == 1 ? x0 : xDim - x0 - wid));
+						const barWid = Math.round(wid);
 
-					const yPos = valToPosY(dataY[ix] as any, scaleY, yDim, yOff);
+						const yPos = valToPosY(dataY[ix] as any, scaleY, yDim, yOff);
 
-					const x = opt.ori == "horizontal" ? Math.round(lft + barWid / 2) : Math.round(yPos);
-					const y = opt.ori == "horizontal" ? Math.round(yPos) : Math.round(lft + barWid / 2);
+						const x = opt.ori == "horizontal" ? Math.round(lft + barWid / 2) : Math.round(yPos);
+						const y = opt.ori == "horizontal" ? Math.round(yPos) : Math.round(lft + barWid / 2);
 
-					u.ctx.textAlign = opt.ori == "horizontal" ? "center" : dataY[ix] as any >= 0 ? "left" : "right";
-					u.ctx.textBaseline = opt.ori == "vertical" ? "middle" : dataY[ix] as any >= 0 ? "bottom" : "top";
+						u.ctx.textAlign = opt.ori == "horizontal" ? "center" : dataY[ix] as any >= 0 ? "left" : "right";
+						u.ctx.textBaseline = opt.ori == "vertical" ? "middle" : dataY[ix] as any >= 0 ? "bottom" : "top";
 
-					u.ctx.fillText(dataY[ix], x, y);
-				}
+						u.ctx.fillText(dataY[ix], x, y);
+					}
+				});
 			});
-		});
 
-		u.ctx.restore();
-	}
+			u.ctx.restore();
+		}
 
-	function range(u, dataMin, dataMax) {
-		const [min, max] = uPlot.rangeNum(0, dataMax, 0.05 as any, true);
-		return [0, max];
-	}
+		function range(u, dataMin, dataMax) {
+			const [min, max] = uPlot.rangeNum(0, dataMax, 0.05 as any, true);
+			return [0, max];
+		}
 
-	let qt;
+		let qt;
 
-	return {
-		hooks: {
+		this.hooks = {
 			drawClear: u=>{
 				qt = qt || new Quadtree(0, 0, u.bbox.width, u.bbox.height);
 
@@ -187,8 +185,8 @@ export function GroupedBarsPlugin(options: GroupedBarsPluginOptionsInput): uPlot
 					}
 				}
 			},
-		},
-		opts: (u, uplotOpts)=>{
+		};
+		this.opts = (u, uplotOpts)=>{
 			const yScaleOpts = {
 				range,
 				ori: opt.ori == "horizontal" ? 1 : 0,
@@ -302,6 +300,12 @@ export function GroupedBarsPlugin(options: GroupedBarsPluginOptionsInput): uPlot
 					});
 				}
 			});
-		},
-	} as uPlot.Plugin;
+		};
+	}
+
+	options: GroupedBarsPluginOptions;
+
+	// uPlot plugin interface (values are set in constructor)
+	hooks: uPlot.Hooks.Defs;
+	opts?: (self: uPlot, opts: uPlot.Options) => void | uPlot.Options;
 }

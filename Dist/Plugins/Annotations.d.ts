@@ -77,8 +77,13 @@ export declare type Annotation = {
 declare type Options_OptionalForInitOnly = any;
 export declare type AnnotationsOptions_ForInit = Omit<AnnotationsOptions, Options_OptionalForInitOnly> & Partial<Pick<AnnotationsOptions, Options_OptionalForInitOnly>>;
 export declare class AnnotationsOptions {
+    constructor(opts?: Partial<AnnotationsOptions>);
     annotations: Annotation[];
 }
 export declare function ConvertPosIndicatorToContextPoint(pos: PositionIndicator, chart: uPlot, context: CanvasRenderingContext2D, defaultScaleKey: "x" | "y", defaultFinalize: FinalizeOp): number;
-export declare function AnnotationsPlugin(opts: AnnotationsOptions): uPlot.Plugin;
+export declare class AnnotationsPlugin implements uPlot.Plugin {
+    constructor(options: ConstructorParameters<typeof AnnotationsOptions>[0]);
+    options: AnnotationsOptions;
+    hooks: uPlot.Hooks.Defs;
+}
 export {};
