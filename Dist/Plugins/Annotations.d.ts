@@ -1,12 +1,12 @@
 import uPlot from "uplot";
 /** Mark some properties which only the former including as optional and set the value to never */
-declare type Without<T, U> = {
+type Without<T, U> = {
     [P in Exclude<keyof T, keyof U>]?: never;
 };
 /** get the XOR type which could make 2 types exclude each other */
-export declare type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
-export declare type FinalizeOp = "floor" | "ceiling" | "round" | ((val: number) => number) | null;
-export declare type PositionIndicator = XOR<{
+export type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
+export type FinalizeOp = "floor" | "ceiling" | "round" | ((val: number) => number) | null;
+export type PositionIndicator = XOR<{
     value: number;
     value_axis?: string;
     /** See uplot.valToPos for info. */
@@ -17,10 +17,10 @@ export declare type PositionIndicator = XOR<{
     pixel_relToFullCanvas?: boolean;
     finalize?: FinalizeOp;
 }>;
-export declare type SizeIndicator = PositionIndicator;
+export type SizeIndicator = PositionIndicator;
 /** See details here: https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation */
-export declare type DrawType = "source-over" | "source-in" | "source-out" | "source-atop" | "destination-over" | "destination-in" | "destination-out" | "destination-atop" | "lighter" | "copy" | "xor" | "multiply" | "screen" | "overlay" | "darken" | "lighten" | "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" | "exclusion" | "hue" | "saturation" | "color" | "luminosity";
-export declare type Annotation = {
+export type DrawType = "source-over" | "source-in" | "source-out" | "source-atop" | "destination-over" | "destination-in" | "destination-out" | "destination-atop" | "lighter" | "copy" | "xor" | "multiply" | "screen" | "overlay" | "darken" | "lighten" | "color-dodge" | "color-burn" | "hard-light" | "soft-light" | "difference" | "exclusion" | "hue" | "saturation" | "color" | "luminosity";
+export type Annotation = {
     drawType?: DrawType;
     shouldRender?: (info: {
         chart: uPlot;
@@ -74,8 +74,8 @@ export declare type Annotation = {
     textAlign?: typeof CanvasRenderingContext2D.prototype.textAlign;
     font?: typeof CanvasRenderingContext2D.prototype.font;
 }>);
-declare type Options_OptionalForInitOnly = any;
-export declare type AnnotationsOptions_ForInit = Omit<AnnotationsOptions, Options_OptionalForInitOnly> & Partial<Pick<AnnotationsOptions, Options_OptionalForInitOnly>>;
+type Options_OptionalForInitOnly = any;
+export type AnnotationsOptions_ForInit = Omit<AnnotationsOptions, Options_OptionalForInitOnly> & Partial<Pick<AnnotationsOptions, Options_OptionalForInitOnly>>;
 export declare class AnnotationsOptions {
     constructor(opts?: Partial<AnnotationsOptions>);
     annotations: Annotation[];

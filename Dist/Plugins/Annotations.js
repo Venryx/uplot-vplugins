@@ -101,8 +101,7 @@ export class AnnotationsPlugin {
                     ctx.beginPath();
                     ctx.rect(left, top, width, height);
                     ctx.clip(); // make sure we don't draw outside of chart-bounds
-                    (_c = entry.preDraw) === null || _c === void 0 ? void 0 : _c.call(// make sure we don't draw outside of chart-bounds
-                    entry, { entry, ctx, chart: u });
+                    (_c = entry.preDraw) === null || _c === void 0 ? void 0 : _c.call(entry, { entry, ctx, chart: u });
                     if (entry.type == "box") {
                         ctx.fillStyle = entry.fillStyle;
                         function FillMinMaxAndSizeFrom2(vals) {

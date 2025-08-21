@@ -1,20 +1,21 @@
 import uPlot from "uplot";
-declare type Options_OptionalForInitOnly = "zoomFactor_x" | "zoomFactor_y" | "clamp";
-export declare type PanAndZoomOptions_ForInit = Omit<PanAndZoomOptions, Options_OptionalForInitOnly> & Partial<Pick<PanAndZoomOptions, Options_OptionalForInitOnly>>;
+import { PartialBy } from "../Utils/General.js";
+export type PanAndZoomOptions_Init = ConstructorParameters<typeof PanAndZoomOptions>[0];
 export declare class PanAndZoomOptions {
-    constructor(data?: Partial<PanAndZoomOptions>);
+    constructor(data?: PartialBy<PanAndZoomOptions, "pan_mouseButtons" | "zoomFactor_x" | "zoomFactor_y" | "clamp">);
+    xMin: number;
+    xMax: number;
+    xRangeMax: number | null;
+    yMin: number;
+    yMax: number;
+    yRangeMax: number | null;
+    pan_mouseButtons: number[];
     zoomFactor_x: number;
     zoomFactor_y: number;
     clamp: boolean;
-    xMin: number;
-    xMax: number;
-    xRangeMax?: number;
-    yMin: number;
-    yMax: number;
-    yRangeMax?: number;
 }
 export declare class PanAndZoomPlugin implements uPlot.Plugin {
-    constructor(options: ConstructorParameters<typeof PanAndZoomOptions>[0]);
+    constructor(options: PanAndZoomOptions_Init);
     options: PanAndZoomOptions;
     clampRangeX: number;
     clampRangeY: number;
@@ -22,4 +23,3 @@ export declare class PanAndZoomPlugin implements uPlot.Plugin {
         ready: (u: uPlot) => void;
     };
 }
-export {};

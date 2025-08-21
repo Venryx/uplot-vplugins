@@ -1,11 +1,11 @@
 import uPlot from "uplot";
-export declare type Orientation = "horizontal" | "vertical";
+export type Orientation = "horizontal" | "vertical";
 export declare function GetOrientationValue(orientation: Orientation): 0 | 1;
-export declare type Direction = "positive" | "negative";
+export type Direction = "positive" | "negative";
 export declare function GetDirectionValue(direction: Direction): 1 | -1;
-export declare type Distribution = "spaceBetween" | "spaceAround" | "spaceEvenly";
+export type Distribution = "spaceBetween" | "spaceAround" | "spaceEvenly";
 export declare function GetDistributionValue(distribution: Distribution): 1 | 2 | 3;
-export declare type GroupedBarsPluginOptionsInput = Exclude<ConstructorParameters<typeof GroupedBarsPluginOptions>[0], undefined>;
+export type GroupedBarsPluginOptionsInput = Exclude<ConstructorParameters<typeof GroupedBarsPluginOptions>[0], undefined>;
 export declare class GroupedBarsPluginOptions {
     constructor(data?: Partial<GroupedBarsPluginOptions>);
     ori: Orientation;

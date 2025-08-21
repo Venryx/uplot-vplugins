@@ -73,8 +73,8 @@ export function NumberCES_KeepBetween(s: Number, min: number, max: number, allow
 	if (min > max && allowFixMinMax) {
 		[min, max] = [max, min];
 	}
-	if (s < min) return min;
-	if (s > max) return max;
+	if (s as number < min) return min;
+	if (s as number > max) return max;
 	return s as number;
 }
 

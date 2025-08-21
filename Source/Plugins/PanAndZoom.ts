@@ -1,19 +1,26 @@
 import uPlot from "uplot";
 import {Assert, E, IsNaN} from "../Utils/FromJSVE.js";
+import {PartialBy} from "../Utils/General.js";
 
-type Options_OptionalForInitOnly = "zoomFactor_x" | "zoomFactor_y" | "clamp";
-export type PanAndZoomOptions_ForInit = Omit<PanAndZoomOptions, Options_OptionalForInitOnly> & Partial<Pick<PanAndZoomOptions, Options_OptionalForInitOnly>>;
+export type PanAndZoomOptions_Init = ConstructorParameters<typeof PanAndZoomOptions>[0];
 export class PanAndZoomOptions {
-	constructor(data?: Partial<PanAndZoomOptions>) { Object.assign(this, data); }
+	constructor(data?: PartialBy<PanAndZoomOptions, "pan_mouseButtons" | "zoomFactor_x" | "zoomFactor_y" | "clamp">) {
+		Object.assign(this, data);
+	}
+	
+	// options that must be user-provided
+	xMin: number;
+	xMax: number;
+	xRangeMax: number|null;
+	yMin: number;
+	yMax: number;
+	yRangeMax: number|null;
+
+	// options that user doesn't need to provide, but can override
+	pan_mouseButtons = [1]; // middle mouse button
 	zoomFactor_x = .75;
 	zoomFactor_y = .75;
 	clamp = true;
-	xMin: number;
-	xMax: number;
-	xRangeMax?: number;
-	yMin: number;
-	yMax: number;
-	yRangeMax?: number;
 }
 
 function clamp(newRange: number, newMin: number, newMax: number, clampRange: number, clampMin: number, clampMax: number): [number, number] {
@@ -32,7 +39,7 @@ function clamp(newRange: number, newMin: number, newMax: number, clampRange: num
 }
 
 export class PanAndZoomPlugin implements uPlot.Plugin {
-	constructor(options: ConstructorParameters<typeof PanAndZoomOptions>[0]) {
+	constructor(options: PanAndZoomOptions_Init) {
 		this.options = new PanAndZoomOptions(options);
 		this.clampRangeX = this.options.xMax - this.options.xMin;
 		this.clampRangeY = this.options.yMax - this.options.yMin;
@@ -50,7 +57,7 @@ export class PanAndZoomPlugin implements uPlot.Plugin {
 
 			// wheel drag pan
 			plot.addEventListener("mousedown", e=>{
-				if (e.button == 1) {
+				if (opt.pan_mouseButtons.includes(e.button)) {
 					e.preventDefault();
 
 					const left0 = e.clientX;
@@ -132,12 +139,12 @@ export class PanAndZoomPlugin implements uPlot.Plugin {
 					[newMinX, newMaxX] = clamp(nxRange, newMinX, newMaxX, this.clampRangeX, opt.xMin, opt.xMax);
 					[newMinY, newMaxY] = clamp(nyRange, newMinY, newMaxY, this.clampRangeY, opt.yMin, opt.yMax);
 
-					if (opt.xRangeMax && newMaxX - newMinX > opt.xRangeMax) {
+					if (opt.xRangeMax != null && newMaxX - newMinX > opt.xRangeMax) {
 						const center = (newMinX + newMaxX) / 2;
 						newMinX = center - (opt.xRangeMax / 2);
 						newMaxX = center + (opt.xRangeMax / 2);
 					}
-					if (opt.yRangeMax && newMaxY - newMinY > opt.yRangeMax) {
+					if (opt.yRangeMax != null && newMaxY - newMinY > opt.yRangeMax) {
 						const center = (newMinY + newMaxY) / 2;
 						newMinY = center - (opt.yRangeMax / 2);
 						newMaxY = center + (opt.yRangeMax / 2);

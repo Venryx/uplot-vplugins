@@ -1,6 +1,8 @@
 import { Assert, IsNaN } from "../Utils/FromJSVE.js";
 export class PanAndZoomOptions {
     constructor(data) {
+        // options that user doesn't need to provide, but can override
+        this.pan_mouseButtons = [1]; // middle mouse button
         this.zoomFactor_x = .75;
         this.zoomFactor_y = .75;
         this.clamp = true;
@@ -31,7 +33,7 @@ export class PanAndZoomPlugin {
                 const rect = plot.getBoundingClientRect();
                 // wheel drag pan
                 plot.addEventListener("mousedown", e => {
-                    if (e.button == 1) {
+                    if (opt.pan_mouseButtons.includes(e.button)) {
                         e.preventDefault();
                         const left0 = e.clientX;
                         const top0 = e.clientY;
@@ -103,12 +105,12 @@ export class PanAndZoomPlugin {
                     if (opt.clamp) {
                         [newMinX, newMaxX] = clamp(nxRange, newMinX, newMaxX, this.clampRangeX, opt.xMin, opt.xMax);
                         [newMinY, newMaxY] = clamp(nyRange, newMinY, newMaxY, this.clampRangeY, opt.yMin, opt.yMax);
-                        if (opt.xRangeMax && newMaxX - newMinX > opt.xRangeMax) {
+                        if (opt.xRangeMax != null && newMaxX - newMinX > opt.xRangeMax) {
                             const center = (newMinX + newMaxX) / 2;
                             newMinX = center - (opt.xRangeMax / 2);
                             newMaxX = center + (opt.xRangeMax / 2);
                         }
-                        if (opt.yRangeMax && newMaxY - newMinY > opt.yRangeMax) {
+                        if (opt.yRangeMax != null && newMaxY - newMinY > opt.yRangeMax) {
                             const center = (newMinY + newMaxY) / 2;
                             newMinY = center - (opt.yRangeMax / 2);
                             newMaxY = center + (opt.yRangeMax / 2);
